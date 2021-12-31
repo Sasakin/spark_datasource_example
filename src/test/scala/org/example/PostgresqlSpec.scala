@@ -13,6 +13,7 @@ class PostgresqlSpec extends AnyFlatSpec with TestContainerForAll {
   override val containerDef = PostgreSQLContainer.Def()
 
   val testTableName = "users"
+  val partitionSize = "10"
 
   "PostgreSQL data source" should "read table" in withContainers { postgresServer =>
     val spark = SparkSession
@@ -21,21 +22,16 @@ class PostgresqlSpec extends AnyFlatSpec with TestContainerForAll {
       .appName("PostgresReaderJob")
       .getOrCreate()
 
-    val df = spark
+    spark
       .read
       .format("org.example.datasource.postgres")
       .option("url", postgresServer.jdbcUrl)
       .option("user", postgresServer.username)
       .option("password", postgresServer.password)
       .option("tableName", testTableName)
-      .option("partitionSize", "10")
-      .option("partitionNum", "3")
-      .option("partitionColumn", "user_id")
+      .option("partitionSize", partitionSize)
       .load()
-
-    df.show()
-
-    assert(df.rdd.partitions.length == 3)
+      .show()
 
     spark.stop()
   }
@@ -58,9 +54,7 @@ class PostgresqlSpec extends AnyFlatSpec with TestContainerForAll {
       .option("user", postgresServer.username)
       .option("password", postgresServer.password)
       .option("tableName", testTableName)
-      .option("partitionSize", "10")
-      .option("partitionNum", "3")
-      .option("partitionColumn", "user_id")
+      .option("partitionSize", partitionSize)
       .mode(SaveMode.Append)
       .save()
 
